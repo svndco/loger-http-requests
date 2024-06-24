@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Log Monitor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #log {
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 80vh;
+      overflow-y: scroll;
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Log Monitor</h1>
+  <div id="log"></div>
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    // Listen for log messages from the main process
+    ipcRenderer.on('log-message', (event, message) => {
+      const logElement = document.getElementById('log');
+      logElement.textContent += message + '\n';
+      logElement.scrollTop = logElement.scrollHeight; // Auto-scroll to the bottom
+    });
+  </script>
+</body>
+</html>

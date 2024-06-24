@@ -6,8 +6,8 @@
       "start": "electron ."
     },
     "dependencies": {
-      "electron": "^latest",
-      "keypress": "^latest"
+      "electron": "latest",
+      "keypress": "latest"
     }
   }
   

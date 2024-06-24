@@ -1,5 +1,7 @@
 const fs = require('fs');
 const readline = require('readline');
+const keypress = require('keypress');
+const { ipcMain, ipcRenderer } = require('electron');
 
 // Create an interface for user input
 const rl = readline.createInterface({
@@ -10,9 +12,15 @@ const rl = readline.createInterface({
 // Pattern to look for HTTP requests
 const httpRequestPattern = /HTTP Request received:/;
 
+let watcher;
+
 const processLine = (line) => {
   if (httpRequestPattern.test(line)) {
     console.log(line);
+    // Send the log message to the Electron window
+    if (process.send) {
+      process.send({ type: 'log-message', message: line });
+    }
   }
 };
 
@@ -33,7 +41,7 @@ const readLogFile = (filePath) => {
 const watchFile = (filePath) => {
   let fileSize = fs.statSync(filePath).size;
 
-  fs.watch(filePath, (eventType) => {
+  watcher = fs.watch(filePath, (eventType) => {
     if (eventType === 'change') {
       const newSize = fs.statSync(filePath).size;
 
@@ -53,6 +61,8 @@ const watchFile = (filePath) => {
       }
     }
   });
+
+  console.log('Watching for file changes. Press Alt+X to stop.')
 };
 
 // Function to remove surrounding single or double quotes
@@ -71,8 +81,32 @@ rl.question('Please enter the path to your log file: ', (logFilePath) => {
     watchFile(logFilePath);
   } else {
     console.error(`The file "${logFilePath}" does not exist. Please provide a valid file path.`);
+    rl.close();
   }
+});
 
-  // Close the input interface
-  rl.close();
+// Listen for keypress events
+keypress(process.stdin);
+
+process.stdin.on('keypress', (ch, key) => {
+  if (key && key.ctrl && key.name === 'c') {
+    process.exit();
+  } else if (key && key.name === 'x' && key.meta) {
+    console.log('\nStopping file watcher and exiting...');
+    if (watcher) {
+      watcher.close();
+    }
+    rl.close();
+    process.exit();
+  }
+});
+
+process.stdin.setRawMode(true);
+process.stdin.resume();
+
+// Send log messages to the Electron window
+process.on('message', (msg) => {
+  if (msg.type === 'log-message') {
+    ipcRenderer.send('log-message', msg.message);
+  }
 });
