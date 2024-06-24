@@ -1,7 +1,9 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const { fork } = require('child_process');
 
 let mainWindow;
+let loggerProcess;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -34,11 +36,32 @@ app.on('activate', function() {
   }
 });
 
-ipcMain.on('log-message', (event, message) => {
-  if (mainWindow) {
-    mainWindow.webContents.send('log-message', message);
+// Handle 'start-watching' event from renderer process
+ipcMain.on('start-watching', (event, filePath) => {
+  if (loggerProcess) {
+    loggerProcess.kill();
   }
+  
+  loggerProcess = fork(path.join(__dirname, 'logger-httpreq.js'), [filePath]);
+
+  // Forward log messages from the logger process to the renderer process
+  loggerProcess.on('message', (msg) => {
+    if (msg.type === 'log-message' && mainWindow) {
+      mainWindow.webContents.send('log-message', msg.message);
+    }
+  });
+
+  loggerProcess.on('exit', (code, signal) => {
+    console.log(`Logger process exited with code ${code} and signal ${signal}`);
+    mainWindow.webContents.send('log-message', 'Logger process exited\n');
+  });
 });
 
-// Load the logger script
-require('./logger-httpreq');
+// Handle 'stop-watching' event from renderer process
+ipcMain.on('stop-watching', () => {
+  if (loggerProcess) {
+    loggerProcess.kill();
+    loggerProcess = null;
+    mainWindow.webContents.send('log-message', 'Stopped watching\n');
+  }
+});
