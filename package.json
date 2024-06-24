@@ -5,8 +5,10 @@
     "scripts": {
       "start": "electron ."
     },
+    "devDependencies": {
+      "electron": "^31.0.2"
+    },
     "dependencies": {
-      "electron": "latest",
       "keypress": "latest"
     }
   }
