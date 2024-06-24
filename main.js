@@ -36,7 +36,7 @@ app.on('activate', function() {
   }
 });
 
-// Handle 'start-watching' event from renderer process
+// Handle 'start-watching' event from the renderer process
 ipcMain.on('start-watching', (event, filePath) => {
   if (loggerProcess) {
     loggerProcess.kill();
@@ -53,15 +53,19 @@ ipcMain.on('start-watching', (event, filePath) => {
 
   loggerProcess.on('exit', (code, signal) => {
     console.log(`Logger process exited with code ${code} and signal ${signal}`);
-    mainWindow.webContents.send('log-message', 'Logger process exited\n');
+    if (mainWindow) {
+      mainWindow.webContents.send('log-message', 'Logger process exited\n');
+    }
   });
 });
 
-// Handle 'stop-watching' event from renderer process
+// Handle 'stop-watching' event from the renderer process
 ipcMain.on('stop-watching', () => {
   if (loggerProcess) {
     loggerProcess.kill();
     loggerProcess = null;
-    mainWindow.webContents.send('log-message', 'Stopped watching\n');
+    if (mainWindow) {
+      mainWindow.webContents.send('log-message', 'Stopped watching\n');
+    }
   }
 });
