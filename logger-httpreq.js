@@ -1,12 +1,6 @@
 const fs = require('fs');
 const readline = require('readline');
 
-// Create an interface for user input
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
 // Pattern to look for HTTP requests
 const httpRequestPattern = /HTTP Request received:/;
 
