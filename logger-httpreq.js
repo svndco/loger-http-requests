@@ -24,7 +24,7 @@ const readLogFile = (filePath) => {
   });
 
   rl.on('line', processLine);
-  
+
   rl.on('close', () => {
     fileStream.close();
   });
