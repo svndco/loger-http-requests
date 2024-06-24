@@ -1,8 +1,11 @@
 const fs = require('fs');
 const readline = require('readline');
 
-// Corrected path to your .txt log file
-const logFilePath = '20240614 ACS-Dir-console.txt';
+// Create an interface for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
 // Pattern to look for HTTP requests
 const httpRequestPattern = /HTTP Request received:/;
@@ -14,12 +17,17 @@ const processLine = (line) => {
 };
 
 const readLogFile = (filePath) => {
+  const fileStream = fs.createReadStream(filePath);
   const rl = readline.createInterface({
-    input: fs.createReadStream(filePath),
+    input: fileStream,
     crlfDelay: Infinity
   });
 
   rl.on('line', processLine);
+  
+  rl.on('close', () => {
+    fileStream.close();
+  });
 };
 
 const watchFile = (filePath) => {
@@ -47,8 +55,24 @@ const watchFile = (filePath) => {
   });
 };
 
-// Read the file from the beginning
-readLogFile(logFilePath);
+// Function to remove surrounding single or double quotes
+const stripQuotes = (str) => str.replace(/^["']|["']$/g, '');
 
-// Watch for updates to the file
-watchFile(logFilePath);
+// Ask the user for the file path
+rl.question('Please enter the path to your log file: ', (logFilePath) => {
+  // Strip quotes from the input
+  logFilePath = stripQuotes(logFilePath.trim());
+
+  if (fs.existsSync(logFilePath)) {
+    // Read the file from the beginning
+    readLogFile(logFilePath);
+
+    // Watch for updates to the file
+    watchFile(logFilePath);
+  } else {
+    console.error(`The file "${logFilePath}" does not exist. Please provide a valid file path.`);
+  }
+
+  // Close the input interface
+  rl.close();
+});
