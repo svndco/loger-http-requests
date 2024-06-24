@@ -1,7 +1,5 @@
 const fs = require('fs');
 const readline = require('readline');
-const keypress = require('keypress');
-const { ipcMain, ipcRenderer } = require('electron');
 
 // Create an interface for user input
 const rl = readline.createInterface({
@@ -16,8 +14,7 @@ let watcher;
 
 const processLine = (line) => {
   if (httpRequestPattern.test(line)) {
-    console.log(line);
-    // Send the log message to the Electron window
+    // Send the log message to the parent process if available
     if (process.send) {
       process.send({ type: 'log-message', message: line });
     }
@@ -62,51 +59,19 @@ const watchFile = (filePath) => {
     }
   });
 
-  console.log('Watching for file changes. Press Alt+X to stop.')
+  process.send({ type: 'log-message', message: `Watching file: ${filePath}\n` });
 };
 
-// Function to remove surrounding single or double quotes
-const stripQuotes = (str) => str.replace(/^["']|["']$/g, '');
+// Get the file path from the command-line arguments
+const logFilePath = process.argv[2];
 
-// Ask the user for the file path
-rl.question('Please enter the path to your log file: ', (logFilePath) => {
-  // Strip quotes from the input
-  logFilePath = stripQuotes(logFilePath.trim());
+if (logFilePath && fs.existsSync(logFilePath)) {
+  // Read the file from the beginning
+  readLogFile(logFilePath);
 
-  if (fs.existsSync(logFilePath)) {
-    // Read the file from the beginning
-    readLogFile(logFilePath);
-
-    // Watch for updates to the file
-    watchFile(logFilePath);
-  } else {
-    console.error(`The file "${logFilePath}" does not exist. Please provide a valid file path.`);
-    rl.close();
-  }
-});
-
-// Listen for keypress events
-keypress(process.stdin);
-
-process.stdin.on('keypress', (ch, key) => {
-  if (key && key.ctrl && key.name === 'c') {
-    process.exit();
-  } else if (key && key.name === 'x' && key.meta) {
-    console.log('\nStopping file watcher and exiting...');
-    if (watcher) {
-      watcher.close();
-    }
-    rl.close();
-    process.exit();
-  }
-});
-
-process.stdin.setRawMode(true);
-process.stdin.resume();
-
-// Send log messages to the Electron window
-process.on('message', (msg) => {
-  if (msg.type === 'log-message') {
-    ipcRenderer.send('log-message', msg.message);
-  }
-});
+  // Watch for updates to the file
+  watchFile(logFilePath);
+} else {
+  process.send({ type: 'log-message', message: `The file "${logFilePath}" does not exist. Stopping process.\n` });
+  process.exit();
+}
